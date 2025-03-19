@@ -351,7 +351,7 @@ model_output_like <- function(pars_use, pars.baseline) {
   pars$p[ages_o15] <- pars$p.2
   #only adjust first row of phi (progression during L2) - if clearance variation, 2nd row is fixed (at 0)
   
-  if(scenario=="progression") {
+  if(scenario=="clearance") {
     pars$s[n.ltbi-1] <- pars_use["s2"]
   }
   
@@ -439,6 +439,8 @@ samples_like <- function(B, par.range, pars.baseline) {
 }
 
 #version of IMIS package function after initial sampling (used in run_IMIS_pt2)
+#this is adapted from the IMIS R package from Raftery & Bao (from https://rdrr.io/cran/IMIS/man/IMIS.html)
+#see also: Raftery AE, Bao L. Estimating and Projecting Trends in HIV/AIDS Generalized Epidemics Using Incremental Mixture Importance Sampling. Biometrics 2010
 IMIS_rounds <- function(B, B.re, number_k, par.range, pars.baseline, 
                         pars_all, outputs_all, ystart_all, yend_all, targets_set) {
   names_vary <- names(par.range)[par.range["diff",]!=0]
@@ -497,7 +499,7 @@ IMIS_rounds <- function(B, B.re, number_k, par.range, pars.baseline,
     }
     #specify which likelihood to use based on which set of targets we are using
     if(targets_set==1) {
-      log_like_all = c(log_like_all, out_round$log_like)
+      log_like_all = c(log_like_all, out_round$log_like1)
     } else if(targets_set==2) {
       log_like_all = c(log_like_all, out_round$log_like2)
     } else if(targets_set==3) {
@@ -591,7 +593,7 @@ model_output_proj <- function(pars_use, pars.baseline, ystart, tmax=21) {
   pars$p[ages_o15] <- pars$p.2
   #only adjust first row of phi (progression during L2) - if progressions variation, 2nd row is fixed (at 0)
   
-   if(scenario=="progression") {
+   if(scenario=="clearance") {
     pars$s[n.ltbi-1] <- pars_use["s2"]
   }
   pars$s <- unlist(pars$s)
@@ -621,13 +623,15 @@ calc_outputs_time <- function(y, nt) {
   pop <- rowSums(y[,-c(1,(ns+2):ncol(y))]) #only the compartment sizes
   pop_u15 <- rowSums(y[,1+as.vector(matind[,,ages_u15])])
   pop_o15 <- rowSums(y[,1+as.vector(matind[,,ages_o15])])
+  pop_u <- rowSums(y[,1+as.vector(matind['U',,])])
+  pop_u_u15 <- rowSums(y[,1+as.vector(matind['U',,ages_u15])])
   
   #incidence
   inc <-  c(rep(0, nt), 100000*diff((y[,1+ns+3] + y[,1+ns+4]), nt)/
               ((pop[1:(ll-nt)] + pop[(nt+1):ll])/2))
-  inc_u15 <- c(rep(0, nt), 100000*diff((y[,1+ns+15] + y[,1+ns+16]), nt)/
+  inc_u15 <- c(rep(0, nt), 100000*diff((y[,1+ns+13] + y[,1+ns+14]), nt)/
                  ((pop_u15[1:(ll-nt)] + pop_u15[(nt+1):ll])/2))
-  inc_o15 <- c(rep(0, nt), 100000*diff((y[,1+ns+3] + y[,1+ns+4] - y[,1+ns+15] - y[,1+ns+16]), nt)/
+  inc_o15 <- c(rep(0, nt), 100000*diff((y[,1+ns+3] + y[,1+ns+4] - y[,1+ns+13] - y[,1+ns+14]), nt)/
                  ((pop_o15[1:(ll-nt)] + pop_o15[(nt+1):ll])/2))
   inc_recent <- c(rep(0, nt), 100000*diff(y[,1+ns+9] + y[,1+ns+10], nt)/
                     ((pop[1:(ll-nt)] + pop[(nt+1):ll])/2))
@@ -637,7 +641,7 @@ calc_outputs_time <- function(y, nt) {
   #ARI
   ari_all <- c(rep(NA, nt), diff((y[,1+ns+1] + y[,1+ns+2]), nt)/
                  ((pop_u[1:(ll-nt)] + pop_u[(nt+1):ll])/2))
-  ari_u15 <- c(rep(NA, nt), diff((y[,1+ns+19] + y[,1+ns+20]), nt)/
+  ari_u15 <- c(rep(NA, nt), diff((y[,1+ns+15] + y[,1+ns+16]), nt)/
                  ((pop_u_u15[1:(ll-nt)] + pop_u_u15[(nt+1):ll])/2))
   
   #mortality
